@@ -8,3 +8,5 @@ El bot se puede ejecutar y probar en: https://web.telegram.org/#/im?p=@bottodo_b
 Contacto: pedropons96@gmail.com
 
 Descripción del bot: BotToDo es un bot creado para ayudarte a organizar tus tareas, además de animarte a completarlas! Para disfrutar del bot al completo, inicia el bot en un grupo, y colabora con tus amigos para derrotar enemigos. ¿Y cómo podéis luchar? ¡Pues completando vuestras tareas!
+
+En el desarrollo de este bot participaron también Carolina Giménez Arias y Ana María Ros Martínez
