@@ -302,36 +302,42 @@ def callbacker(inline_query):
             query=("SELECT DISTINCT bossid FROM saves WHERE chatid=%(chatid)s")
             cursor.execute(query,{"chatid":chatid})
             resultado=cursor.fetchone()
-            bosselect=resultado[0]
-            cursor.close()
-            cnx.close()
+            
+            if resultado!=None:
+                bosselect=resultado[0]
+                cursor.close()
+                cnx.close()
 
-            cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                          host='127.0.0.1',
-                                          database='bottododata')
-            cursor = cnx.cursor()
-            query=("UPDATE savestate SET commands = 'default' WHERE chatid=%(chatid)s")
-            cursor.execute(query,{"chatid":chatid})
-            cnx.commit()
-            cursor.close()
-            cnx.close()
-            cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                host='127.0.0.1',
-                database='bottododata')
-            cursor = cnx.cursor()             
-            query=("INSERT INTO saves(chatid,bossid,userid) VALUES (%s,%s,%s)")
-            cursor.execute(query,(chatid,bosselect,inline_query.from_user.id))
-            cnx.commit()
-            cursor.close()
-            cnx.close()
+                cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                              host='127.0.0.1',
+                                              database='bottododata')
+                cursor = cnx.cursor()
+                query=("UPDATE savestate SET commands = 'default', bosselect = %(bosselect) WHERE chatid=%(chatid)s")
+                cursor.execute(query,{"bosselect":bosselect,"chatid":chatid})
+                cnx.commit()
+                cursor.close()
+                cnx.close()
+                cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                    host='127.0.0.1',
+                    database='bottododata')
+                cursor = cnx.cursor()             
+                query=("INSERT INTO saves(chatid,bossid,userid) VALUES (%s,%s,%s)")
+                cursor.execute(query,(chatid,bosselect,inline_query.from_user.id))
+                cnx.commit()
+                cursor.close()
+                cnx.close()
 
-            text="¡Hola, "+ inline_query.from_user.first_name+"! Te has apuntado al combate, ¿quieres iniciar una conversación conmigo?"
-            markup = types.InlineKeyboardMarkup(2)
-            btn1=types.InlineKeyboardButton(emojize(":smile: ¡Sí! :smile:",use_aliases=True),url="https://web.telegram.org/#/im?p=@bottodo_bot")
-            markup.add(btn1)
-            bot.send_message(chatid, emojize(text,use_aliases=True),reply_markup=markup)
+                text="¡Hola, "+ inline_query.from_user.first_name+"! Te has apuntado al combate, ¿quieres iniciar una conversación conmigo?"
+                markup = types.InlineKeyboardMarkup(2)
+                btn1=types.InlineKeyboardButton(emojize(":smile: ¡Sí! :smile:",use_aliases=True),url="https://web.telegram.org/#/im?p=@bottodo_bot")
+                markup.add(btn1)
+                bot.send_message(chatid, emojize(text,use_aliases=True),reply_markup=markup)
 
-            bot.answer_callback_query(callback_query_id=inline_query.id)
+                bot.answer_callback_query(callback_query_id=inline_query.id)
+            else:
+                saludo = "¡Vaya, parece que no hay ningún visitante 'inesperado' en estos momentos!"
+                bot.send_message(chatid, saludo)
+                bot.answer_callback_query(callback_query_id=inline_query.id)
         
     elif inline_query.data == "deltarea":
 
@@ -782,6 +788,18 @@ def list_tasks(message):
             bot.send_message(message.chat.id, emojize("¡Yujuuu! :confetti_ball: :confetti_ball: \n ¡Has ganado "+str(puntos)+" puntos!"+"\n Tienes un total de "+str(puntuacion)+" puntos."))
             send_congrat(message)
             #Actualizar vida del boss (si hay)
+            
+            cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                      host='127.0.0.1',
+                                      database='bottododata')
+            cursor = cnx.cursor()
+            query=("SELECT bossid FROM saves WHERE userid = %(emp_no)s")
+            cursor.execute(query,{ 'emp_no': message.from_user.id })
+            resultado=cursor.fetchone()
+            bosselect=resultado[0]
+            cursor.close()
+            cnx.close()
+                
             if bosselect != 0:
                 cnx = mysql.connector.connect(user='root', password='bottodobypca',
                                       host='127.0.0.1',
