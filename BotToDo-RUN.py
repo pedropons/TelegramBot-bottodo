@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # BotToDo
-
 # In[ ]:
 
 
@@ -312,17 +310,32 @@ def callbacker(inline_query):
                                               host='127.0.0.1',
                                               database='bottododata')
                 cursor = cnx.cursor()
-                query=("UPDATE savestate SET commands = 'default', bosselect = %(bosselect) WHERE chatid=%(chatid)s")
-                cursor.execute(query,{"bosselect":bosselect,"chatid":chatid})
+                #query=("UPDATE savestate SET commands = 'default', bosselect = %(bosselect) WHERE chatid=%(chatid)s")
+                
+                
+                query=("INSERT INTO savestate(chatid,userid,bosselect,name,commands,grupo) VALUES (%(chatid)s,%(userid)s,%(bosselect)s,%(name)s,%(commands)s,%(grupo)s) ON DUPLICATE KEY UPDATE bosselect=%(bosselect)s,name=%(name)s,commands=%(commands)s")
+                cursor.execute(query,{"bosselect":bosselect,"userid":userid,"chatid":chatid,"commands":'default',"grupo":"si","name":name})
+                
                 cnx.commit()
                 cursor.close()
                 cnx.close()
+                
+                cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                    host='127.0.0.1',
+                                    database='bottododata')
+                cursor = cnx.cursor()             
+                query=("SELECT restante FROM jefes WHERE id=%(bossid)s")
+                cursor.execute(query, {"bossid":bosselect})
+                restante=cursor.fetchone()[0]
+                cursor.close()
+                cnx.close()
+            
                 cnx = mysql.connector.connect(user='root', password='bottodobypca',
                     host='127.0.0.1',
                     database='bottododata')
                 cursor = cnx.cursor()             
-                query=("INSERT INTO saves(chatid,bossid,userid) VALUES (%s,%s,%s)")
-                cursor.execute(query,(chatid,bosselect,inline_query.from_user.id))
+                query=("INSERT INTO saves(chatid,bossid,userid,restante) VALUES (%s,%s,%s,%s)")
+                cursor.execute(query,(chatid,bosselect,inline_query.from_user.id,restante))
                 cnx.commit()
                 cursor.close()
                 cnx.close()
@@ -728,7 +741,7 @@ def list_tasks(message):
                               host='127.0.0.1',
                               database='bottododata')
             cursor = cnx.cursor()
-            query=("SELECT dificultad FROM tareas WHERE usuario = %s AND tarea = %s")
+            query=("SELECT DISTINCT dificultad FROM tareas WHERE usuario = %s AND tarea = %s")
             cursor.execute(query,(userid,message.text))
             
             result=cursor.fetchone()
@@ -796,117 +809,118 @@ def list_tasks(message):
             query=("SELECT bossid FROM saves WHERE userid = %(emp_no)s")
             cursor.execute(query,{ 'emp_no': message.from_user.id })
             resultado=cursor.fetchone()
-            bosselect=resultado[0]
-            cursor.close()
-            cnx.close()
-                
-            if bosselect != 0:
-                cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
-                cursor = cnx.cursor()
-                query=("SELECT vida FROM jefes WHERE id = %(emp_no)s")
-                cursor.execute(query,{ 'emp_no': bosselect })
-                vida=cursor.fetchone()[0]
+            if resultado!=None:
+                bosselect=resultado[0]
                 cursor.close()
                 cnx.close()
-                
-                cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
-                cursor = cnx.cursor()
-                query=("SELECT restante,chatid FROM saves WHERE userid = %(emp_no)s")
-                cursor.execute(query,{ 'emp_no': message.from_user.id })
-                resultado=cursor.fetchone()
-                restante=resultado[0]
-                groupid=resultado[1]
-                cursor.close()
-                cnx.close()
-                
-                restante=restante-puntos
-                
-                cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
-                
-                if restante>0:
-                    #Actualizamos la vida en la BBDD
-                    cursor = cnx.cursor()
-                    query=("UPDATE saves SET restante = %s WHERE chatid = %s")
-                    cursor.execute(query,(restante,groupid))
-                    cnx.commit()
-                    cursor.close()
-                    cnx.close()
-                else:
-                    commands="default"
-                    
-                    cursor = cnx.cursor()
-                    query=("UPDATE saves SET restante = %s WHERE chatid = %s")
-                    cursor.execute(query,(vida,groupid))
-                    cnx.commit()
-                    cursor.close()
-                    cnx.close()
-                    
-                    cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
-                    cursor = cnx.cursor()
-                    query=("DELETE FROM saves WHERE chatid = %(emp_no)s")
-                    cursor.execute(query,{ 'emp_no': groupid })
-                    cnx.commit()
-                    cursor.close()
-                    cnx.close()
-                    
-                    cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
-                    cursor = cnx.cursor()
-                    query=("SELECT nombre FROM jefes WHERE id = %(emp_no)s")
-                    cursor.execute(query,{ 'emp_no': bosselect })
-                    bossname=cursor.fetchone()[0]
-                    cursor.close()
-                    cnx.close()
-                    #Obtenemos la lista de participantes ordenados por puntuacion    
-                    cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
-                    cursor = cnx.cursor()
-                    query=("SELECT nombre,puntuacion FROM usuarios WHERE puntuacion>0 ORDER BY puntuacion DESC")
-                    cursor.execute(query)
-                    a=cursor.fetchall()
-                    cursor.close()
-                    cnx.close()
-                    
-                    printlist=str("")
-                    for i,item in enumerate(a):
-                        a[i]=item[0]
-                        if i==0:
-                            printlist=printlist+"\n"+":white_small_square: "+a[i]+" ("+str(item[1])+") :trophy:"
-                        else:
-                            printlist=printlist+"\n"+":white_small_square: "+a[i]+" ("+str(item[1])+")"
-                       
-                    cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
 
-                    #Ponemos de nuevo todas las puntuaciones a 0
+                if bosselect != 0:
                     cnx = mysql.connector.connect(user='root', password='bottodobypca',
-                                      host='127.0.0.1',
-                                      database='bottododata')
+                                          host='127.0.0.1',
+                                          database='bottododata')
                     cursor = cnx.cursor()
-                    query=("UPDATE usuarios SET puntuacion = 0")
-                    cursor.execute(query)
-                    cnx.commit()
+                    query=("SELECT vida FROM jefes WHERE id = %(emp_no)s")
+                    cursor.execute(query,{ 'emp_no': bosselect })
+                    vida=cursor.fetchone()[0]
                     cursor.close()
                     cnx.close()
-                                    
-                    congrats=emojize("¡Yujuuu! :confetti_ball: :confetti_ball:"+"\n¡Habéis derrotado a *{bossname}*! :smiley: \n\n Aquí están los resultados:\n"+printlist+"\n\n",use_aliases=True)
-                    bot.send_message(groupid, congrats.format(bossname=bossname), parse_mode= 'Markdown')
-                    sti = open('buentrabajo.webp', 'rb')
-                    bot.send_sticker(groupid, sti)
-                    
-                    congrats=emojize("\nSi queréis recibir otro visitante 'inesperado', volved a escribir el comando */start*",use_aliases=True)
-                    bot.send_message(groupid, congrats, parse_mode= 'Markdown')
+
+                    cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+                    cursor = cnx.cursor()
+                    query=("SELECT restante,chatid FROM saves WHERE userid = %(emp_no)s")
+                    cursor.execute(query,{ 'emp_no': message.from_user.id })
+                    resultado=cursor.fetchone()
+                    restante=resultado[0]
+                    groupid=resultado[1]
+                    cursor.close()
+                    cnx.close()
+
+                    restante=restante-puntos
+
+                    cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+
+                    if restante>0:
+                        #Actualizamos la vida en la BBDD
+                        cursor = cnx.cursor()
+                        query=("UPDATE saves SET restante = %s WHERE chatid = %s")
+                        cursor.execute(query,(restante,groupid))
+                        cnx.commit()
+                        cursor.close()
+                        cnx.close()
+                    else:
+                        commands="default"
+
+                        cursor = cnx.cursor()
+                        query=("UPDATE saves SET restante = %s WHERE chatid = %s")
+                        cursor.execute(query,(vida,groupid))
+                        cnx.commit()
+                        cursor.close()
+                        cnx.close()
+
+                        cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+                        cursor = cnx.cursor()
+                        query=("DELETE FROM saves WHERE chatid = %(emp_no)s")
+                        cursor.execute(query,{ 'emp_no': groupid })
+                        cnx.commit()
+                        cursor.close()
+                        cnx.close()
+
+                        cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+                        cursor = cnx.cursor()
+                        query=("SELECT nombre FROM jefes WHERE id = %(emp_no)s")
+                        cursor.execute(query,{ 'emp_no': bosselect })
+                        bossname=cursor.fetchone()[0]
+                        cursor.close()
+                        cnx.close()
+                        #Obtenemos la lista de participantes ordenados por puntuacion    
+                        cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+                        cursor = cnx.cursor()
+                        query=("SELECT nombre,puntuacion FROM usuarios WHERE puntuacion>0 ORDER BY puntuacion DESC")
+                        cursor.execute(query)
+                        a=cursor.fetchall()
+                        cursor.close()
+                        cnx.close()
+
+                        printlist=str("")
+                        for i,item in enumerate(a):
+                            a[i]=item[0]
+                            if i==0:
+                                printlist=printlist+"\n"+":white_small_square: "+a[i]+" ("+str(item[1])+") :trophy:"
+                            else:
+                                printlist=printlist+"\n"+":white_small_square: "+a[i]+" ("+str(item[1])+")"
+
+                        cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+
+                        #Ponemos de nuevo todas las puntuaciones a 0
+                        cnx = mysql.connector.connect(user='root', password='bottodobypca',
+                                          host='127.0.0.1',
+                                          database='bottododata')
+                        cursor = cnx.cursor()
+                        query=("UPDATE usuarios SET puntuacion = 0")
+                        cursor.execute(query)
+                        cnx.commit()
+                        cursor.close()
+                        cnx.close()
+
+                        congrats=emojize("¡Yujuuu! :confetti_ball: :confetti_ball:"+"\n¡Habéis derrotado a *{bossname}*! :smiley: \n\n Aquí están los resultados:\n"+printlist+"\n\n",use_aliases=True)
+                        bot.send_message(groupid, congrats.format(bossname=bossname), parse_mode= 'Markdown')
+                        sti = open('buentrabajo.webp', 'rb')
+                        bot.send_sticker(groupid, sti)
+
+                        congrats=emojize("\nSi queréis recibir otro visitante 'inesperado', volved a escribir el comando */start*",use_aliases=True)
+                        bot.send_message(groupid, congrats, parse_mode= 'Markdown')
         
             markup = types.InlineKeyboardMarkup(2)
             btn1=types.InlineKeyboardButton("Completar otra tarea",callback_data="fintarea")
@@ -1005,4 +1019,5 @@ def list_tasks(message):
     
 print("El bot se está ejecutando")
 bot.polling()
+
 
