@@ -17,7 +17,7 @@ cnx = mysql.connector.connect(user='root', password='bottodobypca',
 cursor = cnx.cursor()
 
 #Conectamos con el bot de telegram
-TOKEN = ................................... #PASTE BOT TOKEN HERE
+TOKEN = '..................................' #PASTE BOT TOKEN HERE
 bot = telebot.TeleBot(TOKEN)
 
 # Funcion que envia el sticker en la bienvenida
